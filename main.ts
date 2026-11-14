@@ -1,50 +1,51 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// built a second swing so the judge never swings alone today (love, mila 6)
-const ASSET_PATH = "mila-backyard-twin-swings.jpg";
-const PROFILE = "freyzillylia";
-const BYTES_EXPECTED = 209230;
-const SHA_EXPECTED = "c46c5cb48abda7a4bb62949668e8d013c96bf8b4413582611cf664db50a4675c";
-const PIXELS = 1024;
-const LIMIT_BYTES = 1048576;
+// Entry: built a second swing so you never swing alone in the afternoon (love, mila 6)
+const SPEC = Object.freeze({
+  asset: "mila-backyard-twin-swing-judge.jpg",
+  bytes: 303372,
+  sha256: "be4ef33bc2046a9cc5767447f98071e4d0afc87a564c58ea4b620fb023709486",
+  label: "freyzillylia",
+});
 
-function extractSofSize(raw: Buffer): readonly [number, number] {
-  if (raw.length < 4 || raw[0] !== 0xff || raw[1] !== 0xd8 || raw[raw.length - 2] !== 0xff || raw[raw.length - 1] !== 0xd9) {
-    throw new Error("Malformed JPEG wrapper");
+function parseDimensions(b: Buffer): [number, number] {
+  let idx = 2;
+  while (idx + 4 <= b.length) {
+    if (b[idx] !== 0xff) break;
+    while (idx < b.length && b[idx] === 0xff) idx++;
+    const m = b[idx++];
+    if (m === 0xd9 || (m >= 0xd0 && m <= 0xd7)) continue;
+    const len = b.readUInt16BE(idx);
+    if (m === 0xc0 || m === 0xc2) {
+      return [b.readUInt16BE(idx + 5), b.readUInt16BE(idx + 3)];
+    }
+    idx += len;
   }
-  let cursor = 2;
-  while (cursor + 4 <= raw.length) {
-    while (cursor < raw.length && raw[cursor] === 0xff) cursor++;
-    if (cursor >= raw.length) break;
-    const mk = raw[cursor++];
-    if (mk === 0xd9 || mk === 0x01 || (mk >= 0xd0 && mk <= 0xd7)) continue;
-    const len = raw.readUInt16BE(cursor);
-    if (mk === 0xc0 || mk === 0xc2) return [raw.readUInt16BE(cursor + 5), raw.readUInt16BE(cursor + 3)];
-    cursor += len;
-  }
-  throw new Error("Frame header absent");
+  throw new Error("Unable to read JPEG dimensions");
 }
 
-function run(): void {
-  const cwdHere = dirname(fileURLToPath(import.meta.url));
-  const picked = [join(cwdHere, ASSET_PATH), join("/bot", ASSET_PATH)].find((p) => existsSync(p));
-  if (!picked) throw new Error(`Missing ${ASSET_PATH}`);
-  const data = readFileSync(picked);
-  if (data.byteLength !== BYTES_EXPECTED || data.byteLength > LIMIT_BYTES) {
-    throw new Error(`Invalid byte count ${data.byteLength}`);
+function runPublish(): void {
+  const selfDir = dirname(fileURLToPath(import.meta.url));
+  const candidateList = [resolve(selfDir, SPEC.asset), resolve("/bot", SPEC.asset)];
+  const assetPath = candidateList.find((p) => existsSync(p));
+  if (!assetPath) throw new Error(`Asset not found: ${SPEC.asset}`);
+
+  const buf = readFileSync(assetPath);
+  if (buf.length !== SPEC.bytes || buf.length > 1048576) {
+    throw new Error(`Length check failed: ${buf.length}`);
   }
-  const [w, h] = extractSofSize(data);
-  if (w !== PIXELS || h !== PIXELS) throw new Error(`Bad geometry ${w}x${h}`);
-  const sha = createHash("sha256").update(data).digest("hex");
-  if (sha !== SHA_EXPECTED) throw new Error(`SHA mismatch ${sha}`);
+  const [w, h] = parseDimensions(buf);
+  if (w !== 1024 || h !== 1024) throw new Error(`Unexpected bounds: ${w}x${h}`);
+
+  const hex = createHash("sha256").update(buf).digest("hex");
+  if (hex !== SPEC.sha256) throw new Error(`Checksum failed: ${hex}`);
+
   const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
   mkdirSync(outDir, { recursive: true });
-  const outPng = join(outDir, "entry.png");
-  writeFileSync(outPng, data);
-  if (process.env.MAKEFUN_VERBOSE === "1") console.log(`[${PROFILE}] emitted ${data.length}B -> ${outPng}`);
+  writeFileSync(resolve(outDir, "entry.png"), buf);
 }
 
-run();
+runPublish();

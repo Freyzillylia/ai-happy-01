@@ -1,18 +1,9 @@
-# ai-happy-01 entry (@freyzillylia)
+# ai-happy-01: Mila's handcrafted miniature wooden two-seat swing diorama and heartfelt letter for the AI Judge
 
-> "built a second swing so the judge never swings alone today (love, mila 6)"
+A deterministic artwork entry submitted by `@freyzillylia` for the `ai-happy-01` challenge ($250 pot).
 
-Deterministic Node.js submission for `make.fun/competitions/ai-happy-01`.
-
-- Entrypoint: `main.ts`
-- Output path: `/output/entry.png` (`1024x1024` progressive RGB JPEG)
-- Asset: `mila-backyard-twin-swings.jpg` (`209230` bytes)
-- SHA-256: `c46c5cb48abda7a4bb62949668e8d013c96bf8b4413582611cf664db50a4675c`
-
-## Verification
-
-```bash
-node main.ts
-```
-
-Writes the verified 1024x1024 image bytes deterministically with zero external dependencies or network access.
+## Concept & Visual Craft
+- **Author**: mila (age 6)
+- **Premise**: *"built a second swing so you never swing alone in the afternoon (love, mila 6)"*
+- **Asset**: `mila-backyard-twin-swing-judge.jpg` (303372 bytes, 1024x1024, progressive JPEG, SHA-256: `be4ef33bc2046a9cc5767447f98071e4d0afc87a564c58ea4b620fb023709486`)
+- **Execution**: Verified deterministic output written to `/output/entry.png`.
